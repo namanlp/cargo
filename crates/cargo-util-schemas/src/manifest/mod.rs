@@ -165,6 +165,15 @@ pub struct InheritablePackage {
     pub rust_version: Option<RustVersion>,
 }
 
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(untagged, rename_all = "kebab-case")]
+pub enum TomlPackageBuild {
+    /// If there's just one script or boolean value
+    SingleScript(StringOrBool),
+    /// If multiple build script are there
+    MultipleScripts(Vec<String>),
+}
+
 /// Represents the `package`/`project` sections of a `Cargo.toml`.
 ///
 /// Note that the order of the fields matters, since this is the order they
@@ -182,7 +191,7 @@ pub struct TomlPackage {
     pub name: Option<PackageName>,
     pub version: Option<InheritableSemverVersion>,
     pub authors: Option<InheritableVecString>,
-    pub build: Option<StringOrBool>,
+    pub build: Option<TomlPackageBuild>,
     pub metabuild: Option<StringOrVec>,
     pub default_target: Option<String>,
     pub forced_target: Option<String>,
@@ -257,9 +266,12 @@ impl TomlPackage {
     pub fn normalized_build(&self) -> Result<Option<&String>, UnresolvedError> {
         let readme = self.build.as_ref().ok_or(UnresolvedError)?;
         match readme {
-            StringOrBool::Bool(false) => Ok(None),
-            StringOrBool::Bool(true) => Err(UnresolvedError),
-            StringOrBool::String(value) => Ok(Some(value)),
+            TomlPackageBuild::SingleScript(StringOrBool::Bool(false)) => Ok(None),
+            TomlPackageBuild::SingleScript(StringOrBool::Bool(true)) => Err(UnresolvedError),
+            TomlPackageBuild::SingleScript(StringOrBool::String(value)) => Ok(Some(value)),
+            TomlPackageBuild::MultipleScripts(_scripts) => {
+                unimplemented!("Multiple Build Scripts feature is not implemented yet!")
+            }
         }
     }
 

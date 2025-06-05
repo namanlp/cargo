@@ -12,6 +12,7 @@ use crate::util::{try_canonicalize, CargoResult, GlobalContext};
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
 use cargo_util_schemas::core::SourceKind;
+use cargo_util_schemas::manifest::{StringOrBool, TomlManifest, TomlPackageBuild};
 use serde::Serialize;
 use walkdir::WalkDir;
 
@@ -505,15 +506,15 @@ fn prepare_for_vendor(
 }
 
 fn prepare_toml_for_vendor(
-    mut me: cargo_util_schemas::manifest::TomlManifest,
+    mut me: TomlManifest,
     packaged_files: &[PathBuf],
     gctx: &GlobalContext,
-) -> CargoResult<cargo_util_schemas::manifest::TomlManifest> {
+) -> CargoResult<TomlManifest> {
     let package = me
         .package
         .as_mut()
         .expect("venedored manifests must have packages");
-    if let Some(cargo_util_schemas::manifest::StringOrBool::String(path)) = &package.build {
+    if let Some(TomlPackageBuild::SingleScript(StringOrBool::String(path))) = &package.build {
         let path = paths::normalize_path(Path::new(path));
         let included = packaged_files.contains(&path);
         let build = if included {
@@ -522,15 +523,15 @@ fn prepare_toml_for_vendor(
                 .into_string()
                 .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
             let path = crate::util::toml::normalize_path_string_sep(path);
-            cargo_util_schemas::manifest::StringOrBool::String(path)
+            StringOrBool::String(path)
         } else {
             gctx.shell().warn(format!(
                 "ignoring `package.build` as `{}` is not included in the published package",
                 path.display()
             ))?;
-            cargo_util_schemas::manifest::StringOrBool::Bool(false)
+            StringOrBool::Bool(false)
         };
-        package.build = Some(build);
+        package.build = Some(TomlPackageBuild::SingleScript(build));
     }
 
     let lib = if let Some(target) = &me.lib {

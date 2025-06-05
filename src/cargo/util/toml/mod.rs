@@ -13,7 +13,7 @@ use cargo_platform::Platform;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::{
     self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
-    TomlWorkspace,
+    TomlPackageBuild, TomlWorkspace,
 };
 use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
@@ -670,7 +670,7 @@ fn normalize_package_toml<'a>(
         .transpose()?
         .map(manifest::InheritableField::Value);
     let build = if is_embedded {
-        Some(StringOrBool::Bool(false))
+        Some(TomlPackageBuild::SingleScript(StringOrBool::Bool(false)))
     } else {
         targets::normalize_build(original_package.build.as_ref(), package_root)
     };
@@ -2885,7 +2885,7 @@ fn prepare_toml_for_publish(
 
     let mut package = me.package().unwrap().clone();
     package.workspace = None;
-    if let Some(StringOrBool::String(path)) = &package.build {
+    if let Some(TomlPackageBuild::SingleScript(StringOrBool::String(path))) = &package.build {
         let path = Path::new(path).to_path_buf();
         let included = packaged_files.map(|i| i.contains(&path)).unwrap_or(true);
         let build = if included {
@@ -2902,7 +2902,7 @@ fn prepare_toml_for_publish(
             ))?;
             StringOrBool::Bool(false)
         };
-        package.build = Some(build);
+        package.build = Some(TomlPackageBuild::SingleScript(build));
     }
     let current_resolver = package
         .resolver
