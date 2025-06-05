@@ -264,8 +264,8 @@ impl TomlPackage {
     }
 
     pub fn normalized_build(&self) -> Result<Option<&String>, UnresolvedError> {
-        let readme = self.build.as_ref().ok_or(UnresolvedError)?;
-        match readme {
+        let build = self.build.as_ref().ok_or(UnresolvedError)?;
+        match build {
             TomlPackageBuild::SingleScript(StringOrBool::Bool(false)) => Ok(None),
             TomlPackageBuild::SingleScript(StringOrBool::Bool(true)) => Err(UnresolvedError),
             TomlPackageBuild::SingleScript(StringOrBool::String(value)) => Ok(Some(value)),
