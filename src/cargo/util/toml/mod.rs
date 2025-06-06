@@ -670,7 +670,7 @@ fn normalize_package_toml<'a>(
         .transpose()?
         .map(manifest::InheritableField::Value);
     let build = if is_embedded {
-        Some(TomlPackageBuild::SingleScript(StringOrBool::Bool(false)))
+        Some(TomlPackageBuild::Auto(false))
     } else {
         targets::normalize_build(original_package.build.as_ref(), package_root)
     };
@@ -2885,7 +2885,9 @@ fn prepare_toml_for_publish(
 
     let mut package = me.package().unwrap().clone();
     package.workspace = None;
-    if let Some(TomlPackageBuild::SingleScript(StringOrBool::String(path))) = &package.build {
+
+    // Validates if build script file exists. If not, warn and ignore.
+    if let Some(TomlPackageBuild::SingleScript(path)) = &package.build {
         let path = Path::new(path).to_path_buf();
         let included = packaged_files.map(|i| i.contains(&path)).unwrap_or(true);
         let build = if included {
@@ -2894,15 +2896,15 @@ fn prepare_toml_for_publish(
                 .into_string()
                 .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
             let path = normalize_path_string_sep(path);
-            StringOrBool::String(path)
+            TomlPackageBuild::SingleScript(path)
         } else {
             ws.gctx().shell().warn(format!(
                 "ignoring `package.build` as `{}` is not included in the published package",
                 path.display()
             ))?;
-            StringOrBool::Bool(false)
+            TomlPackageBuild::Auto(false)
         };
-        package.build = Some(TomlPackageBuild::SingleScript(build));
+        package.build = Some(build);
     }
     let current_resolver = package
         .resolver

@@ -168,9 +168,14 @@ pub struct InheritablePackage {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(untagged, rename_all = "kebab-case")]
 pub enum TomlPackageBuild {
-    /// If there's just one script or boolean value
-    SingleScript(StringOrBool),
-    /// If multiple build script are there
+    /// If build scripts are disabled or enabled.
+    /// If true, `build.rs` in the root folder will be the build script.
+    Auto(bool),
+
+    /// Path of Build Script if there's just one script.
+    SingleScript(String),
+
+    /// Vector of paths if multiple build script are to be used.
     MultipleScripts(Vec<String>),
 }
 
@@ -266,9 +271,9 @@ impl TomlPackage {
     pub fn normalized_build(&self) -> Result<Option<&String>, UnresolvedError> {
         let build = self.build.as_ref().ok_or(UnresolvedError)?;
         match build {
-            TomlPackageBuild::SingleScript(StringOrBool::Bool(false)) => Ok(None),
-            TomlPackageBuild::SingleScript(StringOrBool::Bool(true)) => Err(UnresolvedError),
-            TomlPackageBuild::SingleScript(StringOrBool::String(value)) => Ok(Some(value)),
+            TomlPackageBuild::Auto(false) => Ok(None),
+            TomlPackageBuild::Auto(true) => Err(UnresolvedError),
+            TomlPackageBuild::SingleScript(value) => Ok(Some(value)),
             TomlPackageBuild::MultipleScripts(_scripts) => {
                 unimplemented!("Multiple Build Scripts feature is not implemented yet!")
             }

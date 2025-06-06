@@ -17,8 +17,8 @@ use std::path::{Path, PathBuf};
 use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::{
-    PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
-    TomlLibTarget, TomlManifest, TomlPackageBuild, TomlTarget, TomlTestTarget,
+    PathValue, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget, TomlLibTarget,
+    TomlManifest, TomlPackageBuild, TomlTarget, TomlTestTarget,
 };
 
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
@@ -1087,28 +1087,26 @@ pub fn normalize_build(
             // a build script.
             let build_rs = package_root.join(BUILD_RS);
             if build_rs.is_file() {
-                Some(TomlPackageBuild::SingleScript(StringOrBool::String(
-                    BUILD_RS.to_owned(),
-                )))
+                Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned()))
             } else {
-                Some(TomlPackageBuild::SingleScript(StringOrBool::Bool(false)))
+                Some(TomlPackageBuild::Auto(false))
             }
         }
         // Explicitly no build script.
-        Some(TomlPackageBuild::SingleScript(StringOrBool::Bool(false))) => build.cloned(),
+        Some(TomlPackageBuild::Auto(false)) => build.cloned(),
 
         // Build file's path is given
-        Some(TomlPackageBuild::SingleScript(StringOrBool::String(build_file))) => {
+        Some(TomlPackageBuild::SingleScript(build_file)) => {
             let build_file = paths::normalize_path(Path::new(build_file));
             let build = build_file.into_os_string().into_string().expect(
                 "`build_file` started as a String and `normalize_path` shouldn't have changed that",
             );
-            Some(TomlPackageBuild::SingleScript(StringOrBool::String(build)))
+            Some(TomlPackageBuild::SingleScript(build))
         }
 
-        Some(TomlPackageBuild::SingleScript(StringOrBool::Bool(true))) => Some(
-            TomlPackageBuild::SingleScript(StringOrBool::String(BUILD_RS.to_owned())),
-        ),
+        Some(TomlPackageBuild::Auto(true)) => {
+            Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned()))
+        }
 
         // If multiple build scripts are there
         Some(TomlPackageBuild::MultipleScripts(_scripts)) => {
